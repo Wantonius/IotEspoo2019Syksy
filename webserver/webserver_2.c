@@ -69,10 +69,17 @@ int main(int argc, char **argv) {
 		if(n > 0) {
 			printf("Browser sent us this:%s\n",buffer);
 			filename = get_filename(buffer,filename);
-			printf("filename is:%s\n",filename);	
-			long len = get_filesize(NULL);
-			handle_send_header(NULL,newsockfd, len);
-			handle_send_file(NULL,newsockfd,len);			
+			if(strcmp(filename,"/") == 0 || strcmp(filename,"/index.html") == 0) {	
+				long len = get_filesize(NULL);
+				handle_send_header(NULL,newsockfd, len);
+				handle_send_file(NULL,newsockfd,len);
+			} else {
+				long len = get_filesize(filename);
+				printf("file size:%ld\n",len);
+				handle_send_header(filename,newsockfd, len);
+				handle_send_file(filename,newsockfd,len);
+
+			}		
 		}
 	} while(n>0);
 	
@@ -105,15 +112,21 @@ char *get_filename(char *buffer, char *filename) {
 long get_filesize(char *filename) {
 	FILE *fp;
 	long len;
+	char tempFilename[256];
 	
 	if(filename == NULL) {
 		fp = fopen("./public/index.html","r");
 		if(fp == NULL) {
+			printf("Error in opening file, %s\n",strerror(errno));
 			return -1;
 		}		
 	} else {
-		fp = fopen(filename,"r");
+		memset(tempFilename,0,256);
+		sprintf(tempFilename, "./public%s", filename);
+		printf("File name: %s\n",tempFilename);
+		fp = fopen(tempFilename,"r");
 		if(fp == NULL) {
+			printf("Error in opening file, %s\n",strerror(errno));
 			return -1;
 		}
 	}
