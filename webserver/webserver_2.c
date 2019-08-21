@@ -11,6 +11,8 @@
 
 #define PORT 8080
 
+
+char* get_filename(char *buffer, char *filename);
 long get_filesize(char *filename);
 int handle_send_header(char *filename, int socket, long filesize);
 int handle_send_file(char *filename, int socket, long filesize);
@@ -18,6 +20,7 @@ int handle_send_file(char *filename, int socket, long filesize);
 int main(int argc, char **argv) {
 
 	char buffer[2048];
+	char *filename;
 	int sockfd, newsockfd, clilen, n;
 	struct sockaddr_in server_address, client_address;
 
@@ -57,20 +60,47 @@ int main(int argc, char **argv) {
 		printf("Error opening connected socket, error: %s\n",strerror(errno));
 		return 1;		
 	}
-
+	filename = (char *)malloc(128*sizeof(char));
 	//READ FROM SOCKET AND RESPOND 200 OK STATUS TO BROWSER
+	do {
+		memset(buffer,0,2048);
+		n = read(newsockfd,buffer,2048);
+		
+		if(n > 0) {
+			printf("Browser sent us this:%s\n",buffer);
+			filename = get_filename(buffer,filename);
+			printf("filename is:%s\n",filename);	
+			long len = get_filesize(NULL);
+			handle_send_header(NULL,newsockfd, len);
+			handle_send_file(NULL,newsockfd,len);			
+		}
+	} while(n>0);
 	
-	memset(buffer,0,2048);
-	n = read(newsockfd,buffer,2048);
-	if(n > 0) {
-		printf("Browser sent us this:%s\n",buffer);
-	}
-	long len = get_filesize(NULL);
-	handle_send_header(NULL,newsockfd, len);
-	handle_send_file(NULL,newsockfd,len);	
+	//CLOSE SOCKETS AND FREE MEMORY
+		
+	free(filename);
 	close(newsockfd);
 	close(sockfd);
 }	
+
+char *get_filename(char *buffer, char *filename) {
+	char *c;
+	int loc;
+	
+	memset(filename,0,128);
+	c = strchr(buffer,' ');
+	loc = (int)(c-buffer);	
+	printf("location of space:%d\n",loc);
+	char *temp = &buffer[loc+1];
+	int loc2;
+	c = strchr(temp,' ');
+	loc2 = (int)(c-temp);
+	printf("location of space2:%d\n",loc2);
+	for(int j=0;j<loc2;j++) {
+		filename[j]=temp[j];		
+	}
+	return filename;
+}
 
 long get_filesize(char *filename) {
 	FILE *fp;
